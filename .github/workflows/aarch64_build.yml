@@ -5,7 +5,7 @@ on:
       KERNEL_VERSION:
         description: "内核版本"
         required: true
-        default: 'common-android15-6.6-2025-02'
+        default: 'manifest_13070261.xml'
 
 jobs:
   build:
@@ -22,6 +22,10 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
 
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Install repo tool
         run: |
          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
@@ -33,8 +37,9 @@ jobs:
           echo "Free space:"
           df -h
           # wget https://android.googlesource.com/kernel/manifest/+/refs/heads/${{ inputs.KERNEL_VERSION }}/default.xml
-          # repo init --depth=1 -u https://android.googlesource.com/kernel/manifest -m default.xml
-          repo init --depth=1 -u https://android.googlesource.com/kernel/manifest -b ${{ inputs.KERNEL_VERSION }}
+          cp .github/manifests/${{ inputs.KERNEL_VERSION }} default.xml
+          repo init --depth=1 -u https://android.googlesource.com/kernel/manifest -m default.xml
+          # repo init --depth=1 -u https://android.googlesource.com/kernel/manifest -b ${{ inputs.KERNEL_VERSION }}
           repo --version
           repo --trace sync -c -j$(nproc --all) --no-tags
           df -h
@@ -48,11 +53,11 @@ jobs:
 
       - name: Build kernel
         run: |
-          ./tools/bazel run --verbose_failures --jobs=$(nproc --all) --make_jobs=$(nproc --all) --config=android_ci --profile=target/logs/command.profile.json //common:kernel_aarch64_dist -- --dist_dir=target --flat
+          ./tools/bazel run --verbose_failures --jobs=$(nproc --all) --make_jobs=$(nproc --all) --config=android_ci --profile=target/logs/command.profile.json //common:kernel_aarch64_abi_dist -- --dist_dir=target --flat
           ls -alh target
 
       - name: Upload Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-avd-${{ inputs.KERNEL_VERSION }}
+          name: kernel-avd-aarch64-${{ inputs.KERNEL_VERSION }}
           path: "target/Image.gz"
